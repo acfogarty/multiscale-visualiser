@@ -1,0 +1,68 @@
+For 3D visualisation of Elastic Network Models (ENM) 
+and multiscale molecular systems containing ENMs.
+_____________________________________________________________
+
+Usage: ./enm-calpha-cbeta grofile atom-identities-file bondlist-file atom-identities-file
+
+- grofile is a standard GROMACS-format coordinate file
+
+- atom-identities-file contains a list of the atoms from the 
+  grofile which should be included in the visualisation, in the format:
+
+#comment line
+natoms
+index type
+index type
+etc.
+
+Possible types are: 
+calpha,cbeta
+C,N,O,S,H
+
+Example atom-identities-file:
+
+#atoms to be visualised
+5
+1 calpha
+2 calpha
+3 C
+4 N
+5 H
+
+- bondlist-file contains list of bonds in ENM, format:
+
+#comment line
+n_interactions_color1 #comment
+index_i index_j distance_k
+index_i index_j distance_k
+etc.
+#comment line
+#comment line
+n_interactions_color2 #comment
+index_i index_j distance_k
+index_i index_j distance_k
+etc.
+
+Example bondlist-file:
+
+#first read bonded interactions
+3 #no. bonded interaction
+1 2 0.381
+2 3 0.381
+3 4 0.381
+4 5 0.381
+5 6 0.381
+#now read non-bonded interactions
+#change value (nlines to read) below to change cutoff
+4 #cutoff=1.1 nm
+1 3 0.777
+4 6 0.800
+1 5 0.911
+2 6 1.100
+_____________________________________________________________
+
+Keyboard control of camera:
+  a:                Rotate counterclockwise
+  l:                Rotate clockwise
+  q:                Quit
+You may need to place the cursor over the graphics window for keyboard input to be processed.
