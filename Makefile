@@ -87,11 +87,17 @@ X_LFLAGS = -L$(X_LIB) -lX11 -lXext -lXmu -lXi
 
 default: $(TARGET)
 
-$(TARGET).o: $(TARGET).cpp
+$(TARGET): $(TARGET).o camera.o structs.o
+	$(C++) $(CFLAGS) $(TARGET).o camera.o structs.o -o $(TARGET) $(LD_FLAGS)
+
+$(TARGET).o: $(TARGET).cpp camera.h structs.h camera.o structs.o
 	$(C++) -c $(CFLAGS) $(INC_FLAGS) $(TARGET).cpp
 
-$(TARGET): $(TARGET).o
-	$(C++) $(CFLAGS) $(TARGET).o -o $(TARGET) $(LD_FLAGS)
+camera.o: camera.cpp camera.h structs.cpp structs.h
+	$(C++) -c $(CFLAGS) $(INC_FLAGS) camera.cpp
+
+structs.o: structs.h
+	$(C++) -c $(CFLAGS) $(INC_FLAGS) structs.cpp
 
 #-----------------------------------------------------------------------
 # ---> ADD THE FOLLOWING IF YOU HAVE ADDITIONAL SOURCE FILES, xxx.cpp.

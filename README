@@ -2,7 +2,7 @@ For 3D visualisation of Elastic Network Models (ENM)
 and multiscale molecular systems containing ENMs.
 _____________________________________________________________
 
-Usage: ./enm-calpha-cbeta grofile atom-identities-file bondlist-file atom-identities-file
+Usage: ./enm-calpha-cbeta grofile atom-identities-file ENM-bondlist-file atom-identities-file
 
 - grofile is a standard GROMACS-format coordinate file
 
@@ -29,7 +29,9 @@ Example atom-identities-file:
 4 N
 5 H
 
-- bondlist-file contains list of bonds in ENM, format:
+
+
+- ENM-bondlist-file contains list of bonds in ENM, format:
 
 #comment line
 n_interactions_color1 #comment
@@ -43,7 +45,9 @@ index_i index_j distance_k
 index_i index_j distance_k
 etc.
 
-Example bondlist-file:
+In fact this is exactly the same format as the ENM bond connectivity file read by Espresso++ for ENM simulations. The first set of bonds (n_interactions_color1) are displayed in one colour and would usually be the bonded springs along the backbone. The second set of bonds (n_interactions_color2) are displayed in another colour and would usually be the 'non-bonded' springs.
+
+Example ENM-bondlist-file:
 
 #first read bonded interactions
 3 #no. bonded interaction
@@ -62,7 +66,10 @@ Example bondlist-file:
 _____________________________________________________________
 
 Keyboard control of camera:
-  a:                Rotate counterclockwise
-  l:                Rotate clockwise
-  q:                Quit
+  L, ctrl+L = slide right and left\n\
+  U, ctrl+U = slide up and down\n\
+  F, ctrl+F = slide forward and backward\n\
+  P, ctrl+P = pitch down and up\n\
+  Y, ctrl+Y = yaw left and right\n\
+  R, ctrl+R = roll\n\
 You may need to place the cursor over the graphics window for keyboard input to be processed.

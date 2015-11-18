@@ -12,12 +12,8 @@
 #include <GL/glut.h>                        // GLUT
 #include <GL/glu.h>                        // GLU
 #include <GL/gl.h>                        // OpenGL
+#include "camera.h"
 
-struct Point3D
-{
-    GLfloat x,y,z;
-    Point3D(GLfloat _x, GLfloat _y, GLfloat _z) : x(_x),y(_y),z(_z) {};
-};
 struct ColorTriple
 {
     float color[3];
@@ -26,15 +22,15 @@ struct ColorTriple
 //-----------------------------------------------------------------------
 // Global variables
 //-----------------------------------------------------------------------
-double rotAngle = 0;                    // rotation angle for camera
-double xpos = 6.0, ypos = 6.4, zpos = 4.2;
-double zdistance = 2.0;
+Camera cam; //camera from Hill and Kelley, Pearson International 2007
+double bondCutoff = 0.16; //automatically generate bonds between atomistic particles if the interparticle distance is below this cutoff; except H-H bonds
+double bondCutoff2 = bondCutoff * bondCutoff;
 double cell[3]; //PBC of simulation box
 int nparticles;     //number of particles in inputCoordStream
 int nparticles_vis; //number of particles to be visualised, as listed in inputInfoStream
 int nbonds;     //number of backbone harmonic springs, as listed in inputBondStream
 int nnbs;       //number of non-bonded harmonic springs, as listed in inputBondStream
-std::vector<Point3D> coordinates;
+std::vector<Point3> coordinates;
 std::vector<std::vector<int> > bondsList, nonBondsList;
 std::vector<int> indices_vis; //indices of particles to be included in visualisation
 std::vector<std::string> parttypes; //types of particles in indices_vis
@@ -56,19 +52,9 @@ void init()
     glClearColor(1.0, 1.0, 1.0, 0);            // background color
     glClearDepth(1.0);                   // background depth value
 
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    //gluPerspective(60, 1, 1, 1000);        // setup a perspective projection, alternatively glOrtho()
-    glOrtho(-2.4,2.4,-2.4,2.4,0,50);
-
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-
-    gluLookAt(                            // set up the camera
-         //       0.0, 0.0, zdistance,      // eye position
-         //       5.0, 3.0, 1.0,            // lookat position
-         //       0.0, 1.0, 0.0);           // up direction
-    xpos,ypos,zpos,3,3,3,0.5,1,0);
+    glViewport(0, 0, 640, 480);
+    cam.set(9.6, 10.2, 6.72, 3, 3, 3, 0, 1, 0); // make the initial camera
+    cam.setShape(30.0f, 64.0f/48.0f, 0.5f, 50.0f);
 
     glEnable(GL_DEPTH_TEST);            // enable hidden surface removal
     glEnable(GL_LIGHTING);              // enable lighting
@@ -78,13 +64,27 @@ void init()
     glShadeModel(GL_SMOOTH);            // smooth shading
 }
 
-void drawLine(Point3D point1,Point3D point2)
+void drawLine(Point3 point1,Point3 point2)
 {
     glBegin(GL_LINES);
         glVertex3f(point1.x,point1.y,point1.z);
         glVertex3f(point2.x,point2.y,point2.z);
     glEnd();
 }
+
+float distance_sq(int indexi, int indexj)
+{
+    float dr2;
+    float dx = pow((coordinates[indexi].x-coordinates[indexj].x),2);
+    float dy = pow((coordinates[indexi].y-coordinates[indexj].y),2); 
+    float dz = pow((coordinates[indexi].z-coordinates[indexj].z),2);
+    dx = dx - round(dx/cell[0])*cell[0];
+    dy = dy - round(dy/cell[1])*cell[1];
+    dz = dz - round(dz/cell[2])*cell[2];
+    dr2 = dx*dx + dy*dy + dz*dz;
+    return dr2;
+}
+
 
 //-----------------------------------------------------------------------
 // readCoordinates: reads coordinated from file in GROMACS gro format
@@ -98,7 +98,7 @@ void readCoordinates()
    for (int i=0;i<nparticles;i++)
    {
       std::getline(inputCoordStream, line);
-      Point3D point(std::stof(line.substr(20,8)),std::stof(line.substr(28,8)),std::stof(line.substr(36,8)));
+      Point3 point(std::stof(line.substr(20,8)),std::stof(line.substr(28,8)),std::stof(line.substr(36,8)));
       coordinates.push_back(point);
    }
    inputCoordStream >> cell[0] >> cell[1] >> cell[2];
@@ -187,29 +187,19 @@ void display()
 
     glPushMatrix();                        // pushes the current matrix stack down by one, duplicating the current matrix
 
-    //glTranslated(-5,-3,-1);
-    //glRotated(rotAngle, 0, 1, 0);        // rotate by rotAngle about y-axis
-    //glTranslated(5,3,1);
-
-    //gluLookAt(                            // set up the camera
-    //            xpos, ypos, zpos,      // eye position
-    //            3.0, 3.0, 3.0,            // lookat position
-    //            0.5, 1.0, 0.0);           // up direction
-
     glEnable(GL_COLOR_MATERIAL);        // specify object color
 
     //draw particles
 
     for(int i=0; i<nparticles_vis; i++)
     {
-        int j = indices_vis[i];
+        int j = indices_vis[i] - 1;
         glColor3f(sphereColors[i].color[0],sphereColors[i].color[1],sphereColors[i].color[2]); 
         double x=coordinates[j].x;
         double y=coordinates[j].y;
         double z=coordinates[j].z;
         glPushMatrix();
         glTranslated(x,y,z);
-        //glScaled(0.5,0.5,0.5);
         glutSolidSphere(sphereSizes[i],25,25);
         glPopMatrix();
     }
@@ -230,7 +220,21 @@ void display()
     }
 
     //draw bonds between atomistic particles
-    //if distance<bondCutoff
+    for(int i=0; i<nparticles_vis; i++)
+    {
+        if (parttypes[i]=="A") {continue;}
+        int indexi = indices_vis[i] - 1;
+        for(int j=i+1; j<nparticles_vis; j++)
+        {
+            if (parttypes[j]=="A") {continue;}
+            int indexj = indices_vis[j] - 1;
+            float dist2 = distance_sq(indexi, indexj);
+            if (dist2 < bondCutoff2)
+            {
+                drawLine(coordinates[indexi],coordinates[indexj]);
+            }
+        }
+    }
 
     glPopMatrix();                        // restore the modelview matrix
     glFlush();                            // force OpenGL to render now
@@ -243,39 +247,31 @@ void display()
 //        This is called whenever a keyboard key is hit.
 //-----------------------------------------------------------------------
 
-void keyboard(unsigned char k, int x, int y)
+void keyboard(unsigned char key, int x, int y)
 {
-    switch (k)
-    {
-    case 'a':
-        rotAngle += 5;                    // increase rotation by 5 degrees
-        break;
-    case 'l':
-        rotAngle -= 5;                    // decrease rotation by 5 degrees
-        break;
-    case 'x':
-        xpos += 1.0;
-        break;
-    case 'y':
-        ypos += 1.0;
-        break;
-    case 'z':
-        zpos -= 1.0;
-        break;
-    case 'b':
-        xpos -= 1.0;
-        break;
-    case 'c':
-        ypos -= 1.0;
-        break;
-    case 'd':
-        zpos += 1.0;
-        break;
-    case 'q':
-        exit(0);                        // exit
-    }
+  switch(key)
+  {    
 
-    glutPostRedisplay();                // redraw the image now
+    // controls for camera
+    case 'L':      cam.slide(.2, 0, 0); break;// slide camera right
+    case 'L' - 64: cam.slide(-0.2, 0, 0); break; // slide camera left
+
+    case 'U':      cam.slide(0, .2, 0); break;// slide camera up
+    case 'U' - 64: cam.slide(0, -0.2, 0); break; // slide camera down
+
+    case 'F':    cam.slide(0,0, 0.2); break; // slide camera forward
+    case 'F'-64: cam.slide(0,0,-0.2); break; //slide camera back	
+    // add up/down and left/right controls	
+    case 'P':      cam.pitch(-1.0); break;
+    case 'P' - 64: cam.pitch( 1.0); break;
+    // add yaw controls
+    case 'Y':      cam.yaw(-1.0); break;
+    case 'Y' - 64: cam.yaw( 1.0); break;
+    // add roll controls
+    case 'R':      cam.roll(1.0); break;
+    case 'R' - 64: cam.roll(-1.0); break;
+  }
+    glutPostRedisplay(); // draws it again
 }
 
 //-----------------------------------------------------------------------
@@ -290,10 +286,13 @@ void usage()
   Usage: ./enm-calpha-cbeta grofile bondlistfile\n\
   grofile is a standard GROMACS-format coordinate file\n\
   bondlistfile contains list of bonds in ENM (for format see README)\n\
-  Inputs:\n\
-    a:                Rotate counterclockwise\n\
-    l:                Rotate clockwise\n\
-    q:                Quit\n\
+  Keyboard:\n\
+  L, ctrl+L = slide right and left\n\
+  U, ctrl+U = slide up and down\n\
+  F, ctrl+F = slide forward and backward\n\
+  P, ctrl+P = pitch down and up\n\
+  Y, ctrl+Y = yaw left and right\n\
+  R, ctrl+R = roll\n\
   You may need to place the cursor over the graphics window for\n\
   keyboard input to be processed.\n\
 -----------------------------------------------------------------------\n";
