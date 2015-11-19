@@ -26,22 +26,23 @@ Camera cam; //camera from Hill and Kelley, Pearson International 2007
 double bondCutoff = 0.16; //automatically generate bonds between atomistic particles if the interparticle distance is below this cutoff; except H-H bonds
 double bondCutoff2 = bondCutoff * bondCutoff;
 double cell[3]; //PBC of simulation box
-int nparticles;     //number of particles in inputCoordStream
-int nparticles_vis; //number of particles to be visualised, as listed in inputInfoStream
-int nbonds;     //number of backbone harmonic springs, as listed in inputBondStream
-int nnbs;       //number of non-bonded harmonic springs, as listed in inputBondStream
+int nParticles;     //number of particles in inputCoordStream
+int nParticlesVis; //number of particles to be visualised, as listed in inputInfoStream
+int nBonds;     //number of backbone harmonic springs, as listed in bondsList from inputEnmBondStream
+int nNonBonds;       //number of non-bonded harmonic springs, as listed in nonBondsList from inputEnmBondStream
+int nAtBonds;    //number of atomistic bonds, as listed in atomBondsList from inputAtBondStream
 std::vector<Point3> coordinates;
-std::vector<std::vector<int> > bondsList, nonBondsList;
-std::vector<int> indices_vis; //indices of particles to be included in visualisation
-std::vector<std::string> parttypes; //types of particles in indices_vis
-std::vector<float> sphereSizes; //sizes of particles in indices_vis
-std::vector<ColorTriple> sphereColors; //colors of particles in indices_vis
+std::vector<std::vector<int> > bondsList, nonBondsList, atBondsList;
+std::vector<int> indicesVis; //indices of particles to be included in visualisation
+std::vector<std::string> partTypes; //types of particles in indicesVis
+std::vector<float> sphereSizes; //sizes of particles in indicesVis
+std::vector<ColorTriple> sphereColors; //colors of particles in indicesVis
 //predifined maps for plotting
 std::map<std::string, float> sizeMap = { {"A", 0.1}, {"C", 0.05}, {"H", 0.05}, {"O", 0.05}, {"S", 0.05}, {"N", 0.05} };
 ColorTriple red = {1.0,0.0,0.0}, blue = {0.0, 0.0, 1.0}, white = {1.0, 1.0, 1.0}, cyan = {0.0, 1.0, 1.0}, grey = {0.5, 0.5, 0.5}, yellow = {1.0, 1.0, 0.0};
 std::map<std::string, ColorTriple> colorMap = { {"A", grey}, {"C", cyan}, {"H", white}, {"O", red}, {"S", yellow}, {"N", blue} };
 //O is red, N is blue, C is cyan and S is yellow
-std::ifstream inputCoordStream, inputBondStream, inputInfoStream;
+std::ifstream inputCoordStream, inputEnmBondStream, inputInfoStream;
 
 //-----------------------------------------------------------------------
 // init (sets up some default OpenGL values)
@@ -72,7 +73,7 @@ void drawLine(Point3 point1,Point3 point2)
     glEnd();
 }
 
-float distance_sq(int indexi, int indexj)
+float distanceSqr(int indexi, int indexj)
 {
     float dr2;
     float dx = pow((coordinates[indexi].x-coordinates[indexj].x),2);
@@ -93,9 +94,9 @@ void readCoordinates()
 {
    std::string line;
    std::getline(inputCoordStream, line); //skip comments
-   inputCoordStream >> nparticles;
+   inputCoordStream >> nParticles;
    inputCoordStream.ignore(10000,'\n');
-   for (int i=0;i<nparticles;i++)
+   for (int i=0;i<nParticles;i++)
    {
       std::getline(inputCoordStream, line);
       Point3 point(std::stof(line.substr(20,8)),std::stof(line.substr(28,8)),std::stof(line.substr(36,8)));
@@ -112,21 +113,21 @@ void readParticleInfo()
 {
    std::string line;
    std::getline(inputInfoStream, line); //skip comments
-   inputInfoStream >> nparticles_vis;
+   inputInfoStream >> nParticlesVis;
    inputInfoStream.ignore(10000,'\n');
-   if (nparticles_vis > nparticles) 
+   if (nParticlesVis > nParticles) 
    {
-      std::cout<<"Error!"<<nparticles_vis<<nparticles<<std::endl; //TODO
+      std::cout<<"Error!"<<nParticlesVis<<nParticles<<std::endl; //TODO
    }
-   for (int i=0;i<nparticles_vis;i++)
+   for (int i=0;i<nParticlesVis;i++)
    {
       int index;
       std::string type;
       inputInfoStream >> index;
-      indices_vis.push_back(index);
+      indicesVis.push_back(index);
       inputInfoStream >> type;
       type = type.substr(0,1);
-      parttypes.push_back(type);
+      partTypes.push_back(type);
       sphereSizes.push_back(sizeMap[type]);
       sphereColors.push_back(colorMap[type]); 
    }
@@ -138,40 +139,41 @@ void readBondPairs()
 {
    std::string line;
    //read bonds
-   std::getline(inputBondStream, line); //skip comments
-   inputBondStream >> nbonds;
-   inputBondStream.ignore(10000,'\n');
-   std::cout<<"Reading "<<nbonds<<" backbone bonds"<<std::endl;
-   for (int i=0;i<nbonds;i++)
+   std::getline(inputEnmBondStream, line); //skip comments
+   inputEnmBondStream >> nBonds;
+   inputEnmBondStream.ignore(10000,'\n');
+   std::cout<<"Reading "<<nBonds<<" backbone bonds"<<std::endl;
+   for (int i=0;i<nBonds;i++)
    {
       std::vector<int> indices;
       int temp;
-      inputBondStream >> temp;
+      inputEnmBondStream >> temp;
       indices.push_back(temp);
-      inputBondStream >> temp;
+      inputEnmBondStream >> temp;
       indices.push_back(temp);
       bondsList.push_back(indices);
-      inputBondStream.ignore(10000,'\n');
+      inputEnmBondStream.ignore(10000,'\n');
    }
    //read non-bonded connections
-   std::getline(inputBondStream, line); //skip comments
-   std::getline(inputBondStream, line); //skip comments
-   inputBondStream >> nnbs;
-   inputBondStream.ignore(10000,'\n');
-   std::cout<<"Reading "<<nnbs<<" non-bonded connections"<<std::endl;
-   for (int i=0;i<nnbs;i++)
+   std::getline(inputEnmBondStream, line); //skip comments
+   std::getline(inputEnmBondStream, line); //skip comments
+   inputEnmBondStream >> nNonBonds;
+   inputEnmBondStream.ignore(10000,'\n');
+   std::cout<<"Reading "<<nNonBonds<<" non-bonded connections"<<std::endl;
+   for (int i=0;i<nNonBonds;i++)
    {
       std::vector<int> indices;
       int temp;
-      inputBondStream >> temp;
+      inputEnmBondStream >> temp;
       indices.push_back(temp);
-      inputBondStream >> temp;
+      inputEnmBondStream >> temp;
       indices.push_back(temp);
       nonBondsList.push_back(indices);
-      inputBondStream.ignore(10000,'\n');
+      inputEnmBondStream.ignore(10000,'\n');
    }
 
 }
+
 
 //-----------------------------------------------------------------------
 // display callback function
@@ -191,9 +193,9 @@ void display()
 
     //draw particles
 
-    for(int i=0; i<nparticles_vis; i++)
+    for(int i=0; i<nParticlesVis; i++)
     {
-        int j = indices_vis[i] - 1;
+        int j = indicesVis[i] - 1;
         glColor3f(sphereColors[i].color[0],sphereColors[i].color[1],sphereColors[i].color[2]); 
         double x=coordinates[j].x;
         double y=coordinates[j].y;
@@ -208,27 +210,27 @@ void display()
     glLineWidth(4.0);
 
     glColor3f(0.0, 0.0, 1.0);        // blue
-    for(int i=0; i<nbonds; i++)
+    for(int i=0; i<nBonds; i++)
     {
         drawLine(coordinates[bondsList[i][0]-1],coordinates[bondsList[i][1]-1]);
     }
 
     glColor3f(0.0, 1.0, 0.0);        // green
-    for(int i=0; i<nnbs; i++)
+    for(int i=0; i<nNonBonds; i++)
     {
         drawLine(coordinates[nonBondsList[i][0]-1],coordinates[nonBondsList[i][1]-1]);
     }
 
     //draw bonds between atomistic particles
-    for(int i=0; i<nparticles_vis; i++)
+    for(int i=0; i<nParticlesVis; i++)
     {
-        if (parttypes[i]=="A") {continue;}
-        int indexi = indices_vis[i] - 1;
-        for(int j=i+1; j<nparticles_vis; j++)
+        if (partTypes[i]=="A") {continue;}
+        int indexi = indicesVis[i] - 1;
+        for(int j=i+1; j<nParticlesVis; j++)
         {
-            if (parttypes[j]=="A") {continue;}
-            int indexj = indices_vis[j] - 1;
-            float dist2 = distance_sq(indexi, indexj);
+            if (partTypes[j]=="A") {continue;}
+            int indexj = indicesVis[j] - 1;
+            float dist2 = distanceSqr(indexi, indexj);
             if (dist2 < bondCutoff2)
             {
                 drawLine(coordinates[indexi],coordinates[indexj]);
@@ -330,12 +332,18 @@ int main(int argc, char **argv)
     readParticleInfo();
     inputInfoStream.close();
 
-    //read bond pairs
+    //read ENM bond pairs
     char* bondFileName;
     bondFileName = argv[3];
-    inputBondStream.open(bondFileName,std::ifstream::in); 
+    inputEnmBondStream.open(bondFileName,std::ifstream::in); 
     readBondPairs();
-    inputBondStream.close();
+    inputEnmBondStream.close();
+
+    //read ENM bond pairs
+    bondFileName = argv[4];
+    inputAtBondStream.open(bondFileName,std::ifstream::in); 
+    readAtBondPairs();
+    inputAtBondStream.close();
 
     glutDisplayFunc(display);            // call display() to redraw window
     glutKeyboardFunc(keyboard);          // call keyboard() when key is hit
