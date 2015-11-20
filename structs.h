@@ -38,6 +38,7 @@ public:
 	Vector3(){x = y = z = 0.0;} //default constructor
 	Vector3 cross(Vector3 b); //return this cross b
 	float dot(Vector3 b); // return this dotted with b
+        float length();
 };
 
 #endif

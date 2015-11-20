@@ -16,7 +16,7 @@
 
 struct ColorTriple
 {
-    float color[3];
+    double color[3];
 };
 
 //-----------------------------------------------------------------------
@@ -35,14 +35,14 @@ std::vector<Point3> coordinates;
 std::vector<std::vector<int> > bondsList, nonBondsList, atBondsList;
 std::vector<int> indicesVis; //indices of particles to be included in visualisation
 std::vector<std::string> partTypes; //types of particles in indicesVis
-std::vector<float> sphereSizes; //sizes of particles in indicesVis
-std::vector<ColorTriple> sphereColors; //colors of particles in indicesVis
+std::map<int,double> sphereSizes; //sizes of particles in indicesVis
+std::map<int,ColorTriple> sphereColors; //colors of particles in indicesVis
 //predifined maps for plotting
-std::map<std::string, float> sizeMap = { {"A", 0.1}, {"C", 0.05}, {"H", 0.05}, {"O", 0.05}, {"S", 0.05}, {"N", 0.05} };
+std::map<std::string, double> sizeMap = { {"A", 0.1}, {"C", 0.03}, {"H", 0.03}, {"O", 0.03}, {"S", 0.03}, {"N", 0.03} };
 ColorTriple red = {1.0,0.0,0.0}, blue = {0.0, 0.0, 1.0}, white = {1.0, 1.0, 1.0}, cyan = {0.0, 1.0, 1.0}, grey = {0.5, 0.5, 0.5}, yellow = {1.0, 1.0, 0.0};
 std::map<std::string, ColorTriple> colorMap = { {"A", grey}, {"C", cyan}, {"H", white}, {"O", red}, {"S", yellow}, {"N", blue} };
 //O is red, N is blue, C is cyan and S is yellow
-std::ifstream inputCoordStream, inputEnmBondStream, inputInfoStream;
+std::ifstream inputCoordStream, inputEnmBondStream, inputAtBondStream, inputInfoStream;
 
 //-----------------------------------------------------------------------
 // init (sets up some default OpenGL values)
@@ -73,12 +73,12 @@ void drawLine(Point3 point1,Point3 point2)
     glEnd();
 }
 
-float distanceSqr(int indexi, int indexj)
+double distanceSqr(int indexi, int indexj)
 {
-    float dr2;
-    float dx = pow((coordinates[indexi].x-coordinates[indexj].x),2);
-    float dy = pow((coordinates[indexi].y-coordinates[indexj].y),2); 
-    float dz = pow((coordinates[indexi].z-coordinates[indexj].z),2);
+    double dr2;
+    double dx = pow((coordinates[indexi].x-coordinates[indexj].x),2);
+    double dy = pow((coordinates[indexi].y-coordinates[indexj].y),2); 
+    double dz = pow((coordinates[indexi].z-coordinates[indexj].z),2);
     dx = dx - round(dx/cell[0])*cell[0];
     dy = dy - round(dy/cell[1])*cell[1];
     dz = dz - round(dz/cell[2])*cell[2];
@@ -128,12 +128,12 @@ void readParticleInfo()
       inputInfoStream >> type;
       type = type.substr(0,1);
       partTypes.push_back(type);
-      sphereSizes.push_back(sizeMap[type]);
-      sphereColors.push_back(colorMap[type]); 
+      sphereSizes.insert(std::make_pair(index,sizeMap[type]));
+      sphereColors.insert(std::make_pair(index,colorMap[type])); 
    }
 }
 //-----------------------------------------------------------------------
-// readBondPairs: reads the indices and distances of bonds in the ENM
+// readBondPairs: reads the indices of bonds in the ENM
 //-----------------------------------------------------------------------
 void readBondPairs()
 {
@@ -171,9 +171,31 @@ void readBondPairs()
       nonBondsList.push_back(indices);
       inputEnmBondStream.ignore(10000,'\n');
    }
-
 }
 
+//-----------------------------------------------------------------------
+// readAtBondPairs: reads the indices of bonds in the atomistic protein
+//-----------------------------------------------------------------------
+void readAtBondPairs()
+{
+   std::string line;
+   //read bonds
+   std::getline(inputAtBondStream, line); //skip comments
+   inputAtBondStream >> nAtBonds;
+   inputAtBondStream.ignore(10000,'\n');
+   std::cout<<"Reading "<<nAtBonds<<" atomistic bonds"<<std::endl;
+   for (int i=0;i<nAtBonds;i++)
+   {
+      std::vector<int> indices;
+      int temp;
+      inputAtBondStream >> temp;
+      indices.push_back(temp);
+      inputAtBondStream >> temp;
+      indices.push_back(temp);
+      atBondsList.push_back(indices);
+      inputAtBondStream.ignore(10000,'\n');
+   }
+}
 
 //-----------------------------------------------------------------------
 // display callback function
@@ -195,14 +217,15 @@ void display()
 
     for(int i=0; i<nParticlesVis; i++)
     {
-        int j = indicesVis[i] - 1;
-        glColor3f(sphereColors[i].color[0],sphereColors[i].color[1],sphereColors[i].color[2]); 
+        int index = indicesVis[i];
+        int j = index - 1;
+        glColor3f(sphereColors[index].color[0],sphereColors[index].color[1],sphereColors[index].color[2]); 
         double x=coordinates[j].x;
         double y=coordinates[j].y;
         double z=coordinates[j].z;
         glPushMatrix();
         glTranslated(x,y,z);
-        glutSolidSphere(sphereSizes[i],25,25);
+        glutSolidSphere(sphereSizes[index],25,25);
         glPopMatrix();
     }
 
@@ -222,7 +245,47 @@ void display()
     }
 
     //draw bonds between atomistic particles
-    for(int i=0; i<nParticlesVis; i++)
+    //bonds drawn as cylinders with the half nearest each atom coloured using the sphereColor of that atom
+    //will look ugly if the two atoms have different sphereSizes
+    GLUquadricObj *quadratic;
+    quadratic = gluNewQuadric();
+    for(int i=0; i<nAtBonds; i++)
+    {
+        int index1 = atBondsList[i][0];
+        int index2 = atBondsList[i][1];
+        int j1 = atBondsList[i][0]-1;
+        int j2 = atBondsList[i][1]-1;
+        double x1=coordinates[j1].x;
+        double y1=coordinates[j1].y;
+        double z1=coordinates[j1].z;
+        double x2=coordinates[j2].x;
+        double y2=coordinates[j2].y;
+        double z2=coordinates[j2].z;
+        Vector3 bondVector = Vector3(x2-x1, y2-y1, z2-z1); 
+        double bondLength = bondVector.length();
+        Vector3 zAxis = Vector3(0.0,0.0,1.0); //default axis for cylinder
+        double theta = 180 / 3.14 * acos (zAxis.dot(bondVector) / bondLength);
+        //if ( bondVector.z < 0.0 )
+        //  theta = -theta;
+        Vector3 rotAxis = zAxis.cross(bondVector);
+        glPushMatrix();
+        glTranslated(x1,y1,z1);
+        glRotatef(theta, rotAxis.x, rotAxis.y, rotAxis.z);
+        //half of cylinder in colour of index1
+        glColor3f(sphereColors[index1].color[0],sphereColors[index1].color[1],sphereColors[index1].color[2]); 
+        gluCylinder(quadratic,sphereSizes[index1],sphereSizes[index1],bondLength*0.5,32,32);
+        glPopMatrix();
+        //half of cylinder in colour of index2
+        glPushMatrix();
+        glTranslated(x2,y2,z2);
+        glRotatef(180.0-theta, -rotAxis.x, -rotAxis.y, -rotAxis.z);
+        glColor3f(sphereColors[index2].color[0],sphereColors[index2].color[1],sphereColors[index2].color[2]); 
+        gluCylinder(quadratic,sphereSizes[index2],sphereSizes[index2],bondLength*0.5,32,32);
+        glPopMatrix();
+    }
+
+    //draw automatic bonds between atomistic particles
+/*    for(int i=0; i<nParticlesVis; i++)
     {
         if (partTypes[i]=="A") {continue;}
         int indexi = indicesVis[i] - 1;
@@ -230,13 +293,15 @@ void display()
         {
             if (partTypes[j]=="A") {continue;}
             int indexj = indicesVis[j] - 1;
-            float dist2 = distanceSqr(indexi, indexj);
+            double dist2 = distanceSqr(indexi, indexj);
             if (dist2 < bondCutoff2)
             {
                 drawLine(coordinates[indexi],coordinates[indexj]);
             }
         }
-    }
+    }*/
+
+
 
     glPopMatrix();                        // restore the modelview matrix
     glFlush();                            // force OpenGL to render now
@@ -285,9 +350,11 @@ void usage()
     std::cout << "\n\
 -----------------------------------------------------------------------\n\
   CMSC 427 Sample Program.\n\
-  Usage: ./enm-calpha-cbeta grofile bondlistfile\n\
+  Usage: ./enm-calpha-cbeta grofile atominfofile enmbondlistfile atbondlistfile\n\
   grofile is a standard GROMACS-format coordinate file\n\
-  bondlistfile contains list of bonds in ENM (for format see README)\n\
+  atominfofile contains list of atoms to visualise\n\ 
+  enmbondlistfile contains list of bonds in ENM (for format see README)\n\
+  atbondlistfile contains list of bonds in atomistic protein\n\
   Keyboard:\n\
   L, ctrl+L = slide right and left\n\
   U, ctrl+U = slide up and down\n\
@@ -317,6 +384,12 @@ int main(int argc, char **argv)
 
     glutInitWindowSize(1640,1480);
     glutCreateWindow("Elastic Network Model");    
+
+    if (argc != 5) 
+    {
+        std::cerr<<"Usage: ./enm-calpha-cbeta grofile atominfofile enmbondlistfile atbondlistfile"<<std::endl;
+        return 1;
+    }
 
     //read coordinates of all particles
     char* coordFileName;
