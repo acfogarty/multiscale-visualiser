@@ -1,5 +1,6 @@
 // from Computer Graphics using OpenGL, Hill and Kelley, Pearson International
 // Sandy Hill, November 19, 1999 for ECE660 
+// code from http://www.cs.uky.edu/~cheng/cs535/CS535-HomePage-fall15.htm
 // a Camera class – partial implementation - for flying through 3D scenes. 
 
 #include <iostream>
