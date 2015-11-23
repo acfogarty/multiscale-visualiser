@@ -54,7 +54,7 @@ void init()
     glClearDepth(1.0);                   // background depth value
 
     glViewport(0, 0, 640, 480);
-    cam.set(9.6, 10.2, 6.72, 3, 3, 3, 0, 1, 0); // make the initial camera
+    cam.set(9.6, 10.2, 6.72, 3, 3, 3, 0, 1, 2); // make the initial camera
     cam.setShape(30.0f, 64.0f/48.0f, 0.5f, 50.0f);
 
     glEnable(GL_DEPTH_TEST);            // enable hidden surface removal
@@ -122,14 +122,36 @@ void readParticleInfo()
    for (int i=0;i<nParticlesVis;i++)
    {
       int index;
-      std::string type;
-      inputInfoStream >> index;
+      std::string type, line, word;
+      std::vector<std::string> elements;
+      getline(inputInfoStream, line);
+      std::istringstream iss(line);
+      iss >> index;
       indicesVis.push_back(index);
-      inputInfoStream >> type;
+      iss >> type;
       type = type.substr(0,1);
       partTypes.push_back(type);
-      sphereSizes.insert(std::make_pair(index,sizeMap[type]));
       sphereColors.insert(std::make_pair(index,colorMap[type])); 
+      //read remainder of line (if any)
+      while (iss>>word)
+      {
+         elements.push_back(word);
+      }
+      if (elements.size() == 0) 
+      {
+         sphereSizes.insert(std::make_pair(index,sizeMap[type]));
+      } 
+      else if (elements.size() == 1) 
+      {
+         sphereSizes.insert(std::make_pair(index,std::stod(elements[0])));
+      }
+      else
+      {
+         std::cout<<"In atom-identities-file, lines should be of format: \n\
+                     index(int) type(string) \n\
+                     or of format: \n\
+                     index(int) type(string) sphereSize(float)\n";
+      }
    }
 }
 //-----------------------------------------------------------------------
