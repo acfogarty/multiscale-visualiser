@@ -103,18 +103,18 @@ double distanceSqr(int indexi, int indexj)
 //-----------------------------------------------------------------------
 void readCoordinates()
 {
-   std::string line;
-   std::getline(inputCoordStream, line); //skip comments
-   inputCoordStream >> nParticles;
-   inputCoordStream.ignore(10000,'\n');
-   for (int i=0;i<nParticles;i++)
-   {
-      std::getline(inputCoordStream, line);
-      Point3 point(std::stof(line.substr(20,8)),std::stof(line.substr(28,8)),std::stof(line.substr(36,8)));
-      coordinates.push_back(point);
-   }
-   inputCoordStream >> cell[0] >> cell[1] >> cell[2];
-   inputCoordStream.ignore(10000,'\n');
+    std::string line;
+    std::getline(inputCoordStream, line); //skip comments
+    inputCoordStream >> nParticles;
+    inputCoordStream.ignore(10000,'\n');
+    for (int i=0;i<nParticles;i++)
+    {
+        std::getline(inputCoordStream, line);
+        Point3 point(std::stof(line.substr(20,8)),std::stof(line.substr(28,8)),std::stof(line.substr(36,8)));
+        coordinates.push_back(point);
+    }
+    inputCoordStream >> cell[0] >> cell[1] >> cell[2];
+    inputCoordStream.ignore(10000,'\n');
 }
 
 //-----------------------------------------------------------------------
@@ -122,88 +122,88 @@ void readCoordinates()
 //-----------------------------------------------------------------------
 void readParticleInfo()
 {
-   std::string line;
-   std::getline(inputInfoStream, line); //skip comments
-   inputInfoStream >> nParticlesVis;
-   inputInfoStream.ignore(10000,'\n');
-   if (nParticlesVis > nParticles) 
-   {
-      std::cout<<"Error!"<<nParticlesVis<<nParticles<<std::endl; //TODO
-   }
-   for (int i=0;i<nParticlesVis;i++)
-   {
-      int index;
-      std::string type, line, word;
-      std::vector<std::string> elements;
-      getline(inputInfoStream, line);
-      std::istringstream iss(line);
-      iss >> index;
-      indicesVis.push_back(index);
-      iss >> type;
-      type = type.substr(0,1);
-      partTypes.push_back(type);
-      sphereColors.insert(std::make_pair(index,colorMap[type])); 
-      //read remainder of line (if any)
-      while (iss>>word)
-      {
-         elements.push_back(word);
-      }
-      if (elements.size() == 0) 
-      {
-         sphereSizes.insert(std::make_pair(index,sizeMap[type]));
-      } 
-      else if (elements.size() == 1) 
-      {
-         sphereSizes.insert(std::make_pair(index,std::stod(elements[0])));
-      }
-      else
-      {
-         std::cout<<"In atom-identities-file, lines should be of format: \n\
-                     index(int) type(string) \n\
-                     or of format: \n\
-                     index(int) type(string) sphereSize(double)\n";
-      }
-   }
+    std::string line;
+    std::getline(inputInfoStream, line); //skip comments
+    inputInfoStream >> nParticlesVis;
+    inputInfoStream.ignore(10000,'\n');
+    if (nParticlesVis > nParticles) 
+    {
+        std::cout<<"Error!"<<nParticlesVis<<nParticles<<std::endl; //TODO
+    }
+    for (int i=0;i<nParticlesVis;i++)
+    {
+        int index;
+        std::string type, line, word;
+        std::vector<std::string> elements;
+        getline(inputInfoStream, line);
+        std::istringstream iss(line);
+        iss >> index;
+        indicesVis.push_back(index);
+        iss >> type;
+        type = type.substr(0,1);
+        partTypes.push_back(type);
+        sphereColors.insert(std::make_pair(index,colorMap[type])); 
+        //read remainder of line (if any)
+        while (iss>>word)
+        {
+           elements.push_back(word);
+        }
+        if (elements.size() == 0) 
+        {
+           sphereSizes.insert(std::make_pair(index,sizeMap[type]));
+        } 
+        else if (elements.size() == 1) 
+        {
+           sphereSizes.insert(std::make_pair(index,std::stod(elements[0])));
+        }
+        else
+        {
+           std::cout<<"In atom-identities-file, lines should be of format: \n\
+                       index(int) type(string) \n\
+                       or of format: \n\
+                       index(int) type(string) sphereSize(double)\n";
+        }
+    }
 }
 //-----------------------------------------------------------------------
 // readBondPairs: reads the indices of bonds in the ENM
 //-----------------------------------------------------------------------
 void readBondPairs()
 {
-   std::string line;
-   //read bonds
-   std::getline(inputEnmBondStream, line); //skip comments
-   inputEnmBondStream >> nBonds;
-   inputEnmBondStream.ignore(10000,'\n');
-   std::cout<<"Reading "<<nBonds<<" backbone bonds"<<std::endl;
-   for (int i=0;i<nBonds;i++)
-   {
-      std::vector<int> indices;
-      int temp;
-      inputEnmBondStream >> temp;
-      indices.push_back(temp);
-      inputEnmBondStream >> temp;
-      indices.push_back(temp);
-      bondsList.push_back(indices);
-      inputEnmBondStream.ignore(10000,'\n');
-   }
-   //read non-bonded connections
-   std::getline(inputEnmBondStream, line); //skip comments
-   std::getline(inputEnmBondStream, line); //skip comments
-   inputEnmBondStream >> nNonBonds;
-   inputEnmBondStream.ignore(10000,'\n');
-   std::cout<<"Reading "<<nNonBonds<<" non-bonded connections"<<std::endl;
-   for (int i=0;i<nNonBonds;i++)
-   {
-      std::vector<int> indices;
-      int temp;
-      inputEnmBondStream >> temp;
-      indices.push_back(temp);
-      inputEnmBondStream >> temp;
-      indices.push_back(temp);
-      nonBondsList.push_back(indices);
-      inputEnmBondStream.ignore(10000,'\n');
-   }
+    std::string line;
+    //read bonds
+    std::getline(inputEnmBondStream, line); //skip comments
+    inputEnmBondStream >> nBonds;
+    inputEnmBondStream.ignore(10000,'\n');
+    std::cout<<"Reading "<<nBonds<<" backbone bonds"<<std::endl;
+    for (int i=0;i<nBonds;i++)
+    {
+        std::vector<int> indices;
+        int temp;
+        inputEnmBondStream >> temp;
+        indices.push_back(temp);
+        inputEnmBondStream >> temp;
+        indices.push_back(temp);
+        bondsList.push_back(indices);
+        inputEnmBondStream.ignore(10000,'\n');
+    }
+    //read non-bonded connections
+    std::getline(inputEnmBondStream, line); //skip comments
+    std::getline(inputEnmBondStream, line); //skip comments
+    inputEnmBondStream >> nNonBonds;
+    inputEnmBondStream.ignore(10000,'\n');
+    std::cout<<"Reading "<<nNonBonds<<" non-bonded connections"<<std::endl;
+    for (int i=0;i<nNonBonds;i++)
+    {
+        std::vector<int> indices;
+        int temp;
+        inputEnmBondStream >> temp;
+        indices.push_back(temp);
+        inputEnmBondStream >> temp;
+        indices.push_back(temp);
+        nonBondsList.push_back(indices);
+        inputEnmBondStream.ignore(10000,'\n');
+    }
 }
 
 //-----------------------------------------------------------------------
@@ -211,23 +211,23 @@ void readBondPairs()
 //-----------------------------------------------------------------------
 void readAtBondPairs()
 {
-   std::string line;
-   //read bonds
-   std::getline(inputAtBondStream, line); //skip comments
-   inputAtBondStream >> nAtBonds;
-   inputAtBondStream.ignore(10000,'\n');
-   std::cout<<"Reading "<<nAtBonds<<" atomistic bonds"<<std::endl;
-   for (int i=0;i<nAtBonds;i++)
-   {
-      std::vector<int> indices;
-      int temp;
-      inputAtBondStream >> temp;
-      indices.push_back(temp);
-      inputAtBondStream >> temp;
-      indices.push_back(temp);
-      atBondsList.push_back(indices);
-      inputAtBondStream.ignore(10000,'\n');
-   }
+    std::string line;
+    //read bonds
+    std::getline(inputAtBondStream, line); //skip comments
+    inputAtBondStream >> nAtBonds;
+    inputAtBondStream.ignore(10000,'\n');
+    std::cout<<"Reading "<<nAtBonds<<" atomistic bonds"<<std::endl;
+    for (int i=0;i<nAtBonds;i++)
+    {
+        std::vector<int> indices;
+        int temp;
+        inputAtBondStream >> temp;
+        indices.push_back(temp);
+        inputAtBondStream >> temp;
+        indices.push_back(temp);
+        atBondsList.push_back(indices);
+        inputAtBondStream.ignore(10000,'\n');
+    }
 }
 
 //-----------------------------------------------------------------------
@@ -247,16 +247,8 @@ void display()
     glEnable(GL_COLOR_MATERIAL);        // specify object color
 
     //draw solid background
-    if (1)
+    if (0)
     {
-        //Point3 point1(6.9,5.6,6.7); 
-        //Point3 point2(4.3,7.3,4.7); 
-        //Point3 point3(2.9,3.1,2.1); 
-        //Point3 point4(5.0,1.2,3.5); 
-        //Point3 point1(4.2,4.7,9.57);
-        //Point3 point2(1.6,6.39,7.57);
-        //Point3 point3(0.2,2.19,4.97);
-        //Point3 point4(2.3,0.29,6.37);
         Point3 point1(6.564000000000001, 8.09, 15.939);
         Point3 point2(-2.7824049956027777, 16.54627118649775, 9.708063336264814);
         Point3 point3(-6.6483675048481, 5.166184363508004, 2.4117397272666015);
@@ -387,28 +379,27 @@ void display()
 
 void keyboard(unsigned char key, int x, int y)
 {
-  switch(key)
-  {    
-
-    // controls for camera
-    case 'L':      cam.slide(.2, 0, 0); break;// slide camera right
-    case 'L' - 64: cam.slide(-0.2, 0, 0); break; // slide camera left
-
-    case 'U':      cam.slide(0, .2, 0); break;// slide camera up
-    case 'U' - 64: cam.slide(0, -0.2, 0); break; // slide camera down
-
-    case 'F':    cam.slide(0,0, 0.2); break; // slide camera forward
-    case 'F'-64: cam.slide(0,0,-0.2); break; //slide camera back	
-    // add up/down and left/right controls	
-    case 'P':      cam.pitch(-1.0); break;
-    case 'P' - 64: cam.pitch( 1.0); break;
-    // add yaw controls
-    case 'Y':      cam.yaw(-1.0); break;
-    case 'Y' - 64: cam.yaw( 1.0); break;
-    // add roll controls
-    case 'R':      cam.roll(1.0); break;
-    case 'R' - 64: cam.roll(-1.0); break;
-  }
+    switch(key)
+    {    
+        // controls for camera
+        case 'L':      cam.slide(.2, 0, 0); break;// slide camera right
+        case 'L' - 64: cam.slide(-0.2, 0, 0); break; // slide camera left
+  
+        case 'U':      cam.slide(0, .2, 0); break;// slide camera up
+        case 'U' - 64: cam.slide(0, -0.2, 0); break; // slide camera down
+  
+        case 'F':    cam.slide(0,0, 0.2); break; // slide camera forward
+        case 'F'-64: cam.slide(0,0,-0.2); break; //slide camera back	
+        // add up/down and left/right controls	
+        case 'P':      cam.pitch(-1.0); break;
+        case 'P' - 64: cam.pitch( 1.0); break;
+        // add yaw controls
+        case 'Y':      cam.yaw(-1.0); break;
+        case 'Y' - 64: cam.yaw( 1.0); break;
+        // add roll controls
+        case 'R':      cam.roll(1.0); break;
+        case 'R' - 64: cam.roll(-1.0); break;
+    }
     glutPostRedisplay(); // draws it again
 }
 
