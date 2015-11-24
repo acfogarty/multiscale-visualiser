@@ -73,6 +73,17 @@ void drawLine(Point3 point1,Point3 point2)
     glEnd();
 }
 
+void drawRectangle(Point3 point1, Point3 point2, Point3 point3, Point3 point4)
+{
+    glBegin(GL_QUADS);
+        glColor3d(0.1,0.1,0.1);
+        glVertex3f(point1.x,point1.y,point1.z);
+        glVertex3f(point2.x,point2.y,point2.z);
+        glVertex3f(point3.x,point3.y,point3.z);
+        glVertex3f(point4.x,point4.y,point4.z);
+    glEnd();
+}
+
 double distanceSqr(int indexi, int indexj)
 {
     double dr2;
@@ -150,7 +161,7 @@ void readParticleInfo()
          std::cout<<"In atom-identities-file, lines should be of format: \n\
                      index(int) type(string) \n\
                      or of format: \n\
-                     index(int) type(string) sphereSize(float)\n";
+                     index(int) type(string) sphereSize(double)\n";
       }
    }
 }
@@ -235,8 +246,25 @@ void display()
 
     glEnable(GL_COLOR_MATERIAL);        // specify object color
 
+    //draw solid background
+    if (1)
+    {
+        //Point3 point1(6.9,5.6,6.7); 
+        //Point3 point2(4.3,7.3,4.7); 
+        //Point3 point3(2.9,3.1,2.1); 
+        //Point3 point4(5.0,1.2,3.5); 
+        //Point3 point1(4.2,4.7,9.57);
+        //Point3 point2(1.6,6.39,7.57);
+        //Point3 point3(0.2,2.19,4.97);
+        //Point3 point4(2.3,0.29,6.37);
+        Point3 point1(6.564000000000001, 8.09, 15.939);
+        Point3 point2(-2.7824049956027777, 16.54627118649775, 9.708063336264814);
+        Point3 point3(-6.6483675048481, 5.166184363508004, 2.4117397272666015);
+        Point3 point4(2.698037490754679, -3.290086822989748, 8.642676391001785);
+        drawRectangle(point1, point2, point3, point4);
+    }
+     
     //draw particles
-
     for(int i=0; i<nParticlesVis; i++)
     {
         int index = indicesVis[i];
@@ -304,6 +332,27 @@ void display()
         glColor3f(sphereColors[index2].color[0],sphereColors[index2].color[1],sphereColors[index2].color[2]); 
         gluCylinder(quadratic,sphereSizes[index2],sphereSizes[index2],bondLength*0.5,32,32);
         glPopMatrix();
+    }
+
+    if (1)
+    {
+        //define atomistic region
+        int regionCenter = 224;
+        double regionSize = 2.4;
+        int index = regionCenter;
+        int j = index - 1;
+        double x=coordinates[j].x;
+        double y=coordinates[j].y;
+        double z=coordinates[j].z;
+        //enable transperancy
+        glEnable (GL_BLEND);
+        glBlendFunc (GL_SRC_ALPHA, GL_ONE); 
+        glColor4f(0.0f,0.0f,1.0f,0.5f);
+        glPushMatrix();
+        glTranslated(x,y,z);
+        glutSolidSphere(regionSize,100,100);
+        glPopMatrix();
+        glDisable (GL_BLEND);
     }
 
     //draw automatic bonds between atomistic particles
@@ -402,7 +451,7 @@ int main(int argc, char **argv)
     glutInitDisplayMode(                 // initialize GLUT
                 GLUT_DOUBLE |            // use double buffering
                 GLUT_DEPTH |             // request memory for z-buffer
-                GLUT_RGB );              // set RGB color mode
+                GLUT_RGB | GLUT_ALPHA );              // set RGB color mode
 
     glutInitWindowSize(1640,1480);
     glutCreateWindow("Elastic Network Model");    
