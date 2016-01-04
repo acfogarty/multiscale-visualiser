@@ -2,7 +2,7 @@ For 3D visualisation of Elastic Network Models (ENM)
 and multiscale molecular systems containing ENMs.
 _____________________________________________________________
 
-Usage: ./enm-calpha-cbeta grofile atom-identities-file ENM-bondlist-file atom-identities-file
+Usage: ./enm-calpha-cbeta grofile atom-identities-file ENM-bondlist-file atomistic-bondlist-file
 
 - grofile is a standard GROMACS-format coordinate file
 
@@ -63,6 +63,24 @@ Example ENM-bondlist-file:
 4 6 0.800
 1 5 0.911
 2 6 1.100
+
+- atomistic-bondlist-file contains a list of bonds between atomistic particles, in the format
+
+#comment line
+n_bonds #comment
+index_i index_j distance_k
+index_i index_j distance_k
+etc.
+
+Example:
+
+#this is a list of indices in atomistic bonds
+3 #no. of bonds
+20 21
+20 22
+20 23
+
+
 _____________________________________________________________
 
 Keyboard control of camera:
