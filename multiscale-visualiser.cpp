@@ -272,13 +272,15 @@ void display()
     }
 
     //draw bonds between calpha particles in ENM
-    glLineWidth(4.0);
+    glLineWidth(8.0);
 
     glColor3f(0.0, 0.0, 1.0);        // blue
     for(int i=0; i<nBonds; i++)
     {
         drawLine(coordinates[bondsList[i][0]-1],coordinates[bondsList[i][1]-1]);
     }
+
+    glLineWidth(2.0);
 
     glColor3f(0.0, 1.0, 0.0);        // green
     for(int i=0; i<nNonBonds; i++)
@@ -326,7 +328,7 @@ void display()
         glPopMatrix();
     }
 
-    if (1)
+    if (0)
     {
         //define atomistic region
         int regionCenter = 224;
@@ -363,8 +365,6 @@ void display()
             }
         }
     }*/
-
-
 
     glPopMatrix();                        // restore the modelview matrix
     glFlush();                            // force OpenGL to render now
@@ -442,7 +442,8 @@ int main(int argc, char **argv)
     glutInitDisplayMode(                 // initialize GLUT
                 GLUT_DOUBLE |            // use double buffering
                 GLUT_DEPTH |             // request memory for z-buffer
-                GLUT_RGB | GLUT_ALPHA );              // set RGB color mode
+                //GLUT_RGB | GLUT_ALPHA );              // set RGB color mode
+                GLUT_RGB );              // set RGB color mode
 
     glutInitWindowSize(1640,1480);
     glutCreateWindow("Elastic Network Model");    
